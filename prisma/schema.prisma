@@ -1,0 +1,349 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ──────────────────────────────────────────────────────────
+// Enums
+// ──────────────────────────────────────────────────────────
+
+enum EstadoLead {
+  NUEVO
+  CONTACTADO
+  CALIFICADO
+  PROPUESTA
+  NEGOCIACION
+  GANADO
+  PERDIDO
+  EN_ESPERA
+}
+
+enum EstadoPropuesta {
+  Borrador
+  Lista
+  Enviada
+  Vista
+  Aceptada
+  Rechazada
+  Vencida
+}
+
+enum EstadoProyecto {
+  ACTIVO
+  EN_PAUSA
+  RETRASADO
+  COMPLETADO
+  CANCELADO
+}
+
+enum EstadoPago {
+  PENDIENTE
+  PARCIAL
+  COMPLETO
+  VENCIDO
+}
+
+enum TipoTarea {
+  llamada
+  email
+  reunion
+  propuesta
+  seguimiento
+  entregable
+  pago
+  otro
+}
+
+enum PrioridadTarea {
+  urgente
+  alta
+  media
+  baja
+}
+
+enum EstadoTarea {
+  PENDIENTE
+  EN_PROGRESO
+  COMPLETADA
+  CANCELADA
+}
+
+// ──────────────────────────────────────────────────────────
+// Consultor — entidad maestra, referenciada por FK desde el resto
+// ──────────────────────────────────────────────────────────
+
+model Consultor {
+  id           String    @id @default(cuid())
+  nombre       String
+  email        String    @unique
+  cargo        String?
+  especialidad String?
+  pais         String?
+  ciudad       String?
+  fechaIngreso DateTime? @db.Date
+  activo       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  leadsAsignados  Lead[]        @relation("LeadConsultor")
+  propuestas      Propuesta[]
+  proyectos       Proyecto[]
+  tareasAsignadas Tarea[]
+  interacciones   Interaccion[]
+
+  @@map("consultores")
+}
+
+// ──────────────────────────────────────────────────────────
+// Lead
+// ──────────────────────────────────────────────────────────
+
+model Lead {
+  id String @id @default(cuid())
+
+  nombreEmpresa    String
+  sector           String?
+  tamano           String?
+  pais             String?
+  ciudad           String?
+  retoPrincipal    String?
+  anosOperacion    String?
+  ingresoAnual     String?
+  exporta          Boolean?
+  nombreContacto   String
+  cargo            String?
+  emailCorporativo String
+  whatsapp         String?
+  momentoContacto  String?
+  comoNosConocio   String?
+
+  madurezAutoevaluada Decimal? @db.Decimal(5, 2)
+  dim1                Decimal? @db.Decimal(5, 2)
+  dim2                Decimal? @db.Decimal(5, 2)
+  dim3                Decimal? @db.Decimal(5, 2)
+  dim4                Decimal? @db.Decimal(5, 2)
+  dim5                Decimal? @db.Decimal(5, 2)
+  dim6                Decimal? @db.Decimal(5, 2)
+  dim7                Decimal? @db.Decimal(5, 2)
+  dim8                Decimal? @db.Decimal(5, 2)
+  dim9                Decimal? @db.Decimal(5, 2)
+  dim10               Decimal? @db.Decimal(5, 2)
+  indiceMadurez       Decimal? @db.Decimal(5, 2)
+
+  servicioSugeridoForja String?
+  estadoLead            EstadoLead @default(NUEVO)
+  fuenteFormulario      String?
+  aceptaPoliticaDatos   Boolean    @default(false)
+
+  consultorId String?
+  consultor   Consultor? @relation("LeadConsultor", fields: [consultorId], references: [id])
+
+  fechaContacto DateTime? @db.Date
+  notas         String?   @db.Text
+
+  // Pendiente: en Sheets eran fórmulas nativas (AK-AM), nunca calculadas en
+  // JS. Se dejan nullable; la lógica de cálculo se define en sesión futura.
+  scoreLead         Decimal? @db.Decimal(6, 2)
+  clasificacion     String?
+  accionRecomendada String?  @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  propuestas    Propuesta[]
+  proyectos     Proyecto[]
+  interacciones Interaccion[]
+  tareas        Tarea[]
+
+  @@index([estadoLead])
+  @@index([consultorId])
+  @@map("leads")
+}
+
+// ──────────────────────────────────────────────────────────
+// Propuesta (esquema creado ahora; su ruta de API se migra después)
+// ──────────────────────────────────────────────────────────
+
+model Propuesta {
+  id String @id @default(cuid())
+
+  titulo String
+
+  leadId String?
+  lead   Lead?   @relation(fields: [leadId], references: [id])
+
+  emailCliente   String?
+  empresaCliente String?
+  contacto       String?
+
+  consultorId String?
+  consultor   Consultor? @relation(fields: [consultorId], references: [id])
+
+  servicioForja String?
+  introduccion  String? @db.Text
+  diagnostico   String? @db.Text
+  alcance       String? @db.Text
+  metodologia   String? @db.Text
+  entregables   String? @db.Text
+  timeline      String? @db.Text
+  inversion     String? @db.Text
+  terminos      String? @db.Text
+
+  valorUSD  Decimal?        @db.Decimal(12, 2)
+  estado    EstadoPropuesta @default(Borrador)
+  version   String?
+  plantilla String?
+
+  fechaCreacion DateTime? @db.Date
+  fechaEnvio    DateTime? @db.Date
+  fechaVisto    DateTime? @db.Date
+
+  notasInternas String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("propuestas")
+}
+
+// ──────────────────────────────────────────────────────────
+// Proyecto (esquema creado ahora; su ruta de API se migra después)
+// ──────────────────────────────────────────────────────────
+
+model Proyecto {
+  id String @id @default(cuid())
+
+  nombre String
+
+  leadId String?
+  lead   Lead?   @relation(fields: [leadId], references: [id])
+
+  empresaCliente String?
+  contacto       String?
+  emailCliente   String?
+
+  consultorId String?
+  consultor   Consultor? @relation(fields: [consultorId], references: [id])
+
+  servicioForja String?
+  valorUSD      Decimal? @db.Decimal(12, 2)
+
+  etapaForja String?
+  faseActual String?
+
+  igmInicial Decimal? @db.Decimal(5, 2)
+  igmFinal   Decimal? @db.Decimal(5, 2)
+
+  fechaInicio     DateTime? @db.Date
+  fechaCierreEst  DateTime? @db.Date
+  fechaCierreReal DateTime? @db.Date
+
+  estadoPago EstadoPago @default(PENDIENTE)
+
+  porcentajeAvance      Int?
+  proximaAccion         String?   @db.Text
+  fechaProximaAccion    DateTime? @db.Date
+  entregablesPendientes String?   @db.Text
+  notas                 String?   @db.Text
+
+  estadoProyecto EstadoProyecto @default(ACTIVO)
+
+  // Mecanismo NPS vigente: columnas dedicadas (no el texto embebido en
+  // notas que usa /api/reportes vía regex — eso queda marcado como legado).
+  // npsDateSaved es texto plano (no DateTime): se genera con
+  // toLocaleDateString("es-CO", {day,month:"long",year}) — un string tipo
+  // "28 de julio de 2026" que Date() no puede reparsear de forma fiable.
+  npsScore     Int?
+  npsDateSaved String?
+  npsComment   String?   @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("proyectos")
+}
+
+// ──────────────────────────────────────────────────────────
+// Tarea
+// FK real solo hacia Lead (ya migrado a Postgres). Proyecto y Propuesta
+// siguen en Google Sheets hasta su propia fase de migración, así que
+// relacionadoCon/idReferencia se mantienen como texto plano (igual que
+// hoy) para esos dos casos — no se puede forzar una FK contra una tabla
+// que aún no tiene esas filas. Cuando Proyecto/Propuesta migren, esto se
+// puede endurecer a FK real igual que se hizo con Lead.
+// ──────────────────────────────────────────────────────────
+
+model Tarea {
+  id String @id @default(cuid())
+
+  titulo      String
+  descripcion String?         @db.Text
+  tipo        TipoTarea?
+  prioridad   PrioridadTarea?
+
+  asignadoAId String?
+  asignadoA   Consultor? @relation(fields: [asignadoAId], references: [id])
+
+  leadId String?
+  lead   Lead?   @relation(fields: [leadId], references: [id])
+
+  // Texto plano (compat con Proyecto/Propuesta aún no migrados).
+  // Para Lead, idReferencia coincide con leadId; para Proyecto/Propuesta
+  // guarda el id de Sheets tal cual, sin integridad referencial todavía.
+  relacionadoCon String?
+  idReferencia   String?
+
+  empresa          String?
+  fechaVencimiento DateTime? @db.Date
+  hora             String?
+
+  estado       EstadoTarea @default(PENDIENTE)
+  completadaEn DateTime?
+  creadaPor    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("tareas")
+}
+
+// ──────────────────────────────────────────────────────────
+// Interaccion (esquema creado ahora; su ruta de API se migra después)
+// ──────────────────────────────────────────────────────────
+
+model Interaccion {
+  id String @id @default(cuid())
+
+  leadId String?
+  lead   Lead?   @relation(fields: [leadId], references: [id])
+
+  emailLead   String?
+  empresa     String?
+  contacto    String?
+  tipo        String?
+  titulo      String?
+  descripcion String? @db.Text
+  resultado   String?
+  duracion    Int?
+
+  consultorId String?
+  consultor   Consultor? @relation(fields: [consultorId], references: [id])
+
+  fecha    DateTime? @db.Date
+  hora     String?
+  archivos String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("interacciones")
+}
+
+// Evento se omite deliberadamente: vive en Google Calendar externo (scopes
+// calendar/calendar.events ya presentes en lib/auth.ts, sin tocar).
+//
+// Madurez (types/madurez.ts, "Evaluado") es una vista derivada de Lead
+// (dim1-10 + indiceMadurez), no una entidad persistida aparte.
