@@ -102,3 +102,41 @@ export async function PUT(request: Request) {
     );
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json(
+        { error: "Sesión expirada. Vuelve a iniciar sesión." },
+        { status: 401 }
+      );
+    }
+    if (session.user?.role !== "admin") {
+      return NextResponse.json(
+        { error: "Solo un administrador puede eliminar leads." },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+    const ids: unknown = body?.ids;
+    if (!Array.isArray(ids) || ids.length === 0 || !ids.every((id) => typeof id === "string")) {
+      return NextResponse.json(
+        { error: "Debes indicar al menos un id de lead." },
+        { status: 400 }
+      );
+    }
+
+    const { count } = await prisma.lead.deleteMany({ where: { id: { in: ids } } });
+
+    return NextResponse.json({ success: true, count });
+  } catch (error: unknown) {
+    const err = error as { message?: string };
+    console.error("Error al eliminar leads:", err?.message || error);
+    return NextResponse.json(
+      { error: "Error al eliminar", detail: err?.message },
+      { status: 500 }
+    );
+  }
+}

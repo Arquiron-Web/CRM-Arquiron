@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -14,6 +15,7 @@ import {
   MoreHorizontal,
   MessageCircle,
   Download,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +38,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { LeadDrawer } from "@/components/pipeline/LeadDrawer";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { NewLeadModal } from "@/components/leads/NewLeadModal";
 import { NewProyectoModal } from "@/components/proyectos/NewProyectoModal";
 import { LeadCardGrid } from "@/components/leads/LeadCardGrid";
@@ -65,6 +68,8 @@ function whatsappUrl(whatsapp: string): string {
 
 function LeadsPageContent() {
   const searchParams = useSearchParams();
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "admin";
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -86,6 +91,8 @@ function LeadsPageContent() {
   const [editConsultorValue, setEditConsultorValue] = useState("");
   const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [leadsAEliminar, setLeadsAEliminar] = useState<Lead[] | null>(null);
+  const [eliminando, setEliminando] = useState(false);
 
   const { consultores } = useConsultores();
 
@@ -362,6 +369,39 @@ function LeadsPageContent() {
     }
   };
 
+  const handleEliminarConfirmado = async () => {
+    if (!leadsAEliminar || leadsAEliminar.length === 0 || eliminando) return;
+    setEliminando(true);
+    const ids = leadsAEliminar.map((l) => l.id);
+    try {
+      const res = await fetch("/api/leads", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error || "Error al eliminar");
+      }
+      setLeads((prev) => prev.filter((l) => !ids.includes(l.id)));
+      setSeleccionados((prev) => {
+        const next = new Set(prev);
+        ids.forEach((id) => next.delete(id));
+        return next;
+      });
+      if (drawerLead && ids.includes(drawerLead.id)) {
+        setDrawerOpen(false);
+        setDrawerLead(null);
+      }
+      toast.success(ids.length > 1 ? `${ids.length} leads eliminados` : "Lead eliminado");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error al eliminar");
+    } finally {
+      setEliminando(false);
+      setLeadsAEliminar(null);
+    }
+  };
+
   const exportarSeleccionados = () => {
     const leadsExportar = leads.filter((l) => seleccionados.has(getLeadKey(l)));
     if (leadsExportar.length === 0) return;
@@ -562,6 +602,19 @@ function LeadsPageContent() {
               <Download className="h-3.5 w-3.5" />
               Exportar
             </button>
+            {isAdmin && (
+              <button
+                onClick={() =>
+                  setLeadsAEliminar(
+                    leads.filter((l) => seleccionados.has(getLeadKey(l)))
+                  )
+                }
+                className="flex h-8 items-center gap-1.5 rounded-lg bg-white/10 px-3 text-xs font-medium text-white transition-colors hover:bg-red-500/80"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Eliminar
+              </button>
+            )}
             <button
               onClick={() => setSeleccionados(new Set())}
               className="ml-auto text-white/60 transition-colors hover:text-white"
@@ -882,6 +935,18 @@ function LeadsPageContent() {
                           >
                             Asignar consultor
                           </DropdownMenuItem>
+                          {isAdmin && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                variant="destructive"
+                                onClick={() => setLeadsAEliminar([lead])}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Eliminar
+                              </DropdownMenuItem>
+                            </>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -958,6 +1023,25 @@ function LeadsPageContent() {
           setProyectoDatosPreCargados(undefined);
         }}
         datosPreCargados={proyectoDatosPreCargados}
+      />
+
+      <ConfirmDialog
+        open={leadsAEliminar !== null}
+        title={
+          leadsAEliminar && leadsAEliminar.length > 1
+            ? `¿Eliminar ${leadsAEliminar.length} leads?`
+            : "¿Eliminar este lead?"
+        }
+        description={
+          leadsAEliminar && leadsAEliminar.length > 1
+            ? "Esta acción no se puede deshacer. Los proyectos o propuestas ya vinculados a estos leads no se eliminan, pero quedarán sin lead asociado."
+            : `Esta acción no se puede deshacer${leadsAEliminar?.[0]?.nombreContacto ? ` (${leadsAEliminar[0].nombreContacto})` : ""}. Si este lead tiene un proyecto o propuesta vinculados, quedarán sin lead asociado.`
+        }
+        confirmLabel={eliminando ? "Eliminando..." : "Eliminar"}
+        cancelLabel="Cancelar"
+        accentColor="#ef4444"
+        onConfirm={handleEliminarConfirmado}
+        onCancel={() => setLeadsAEliminar(null)}
       />
     </div>
   );
