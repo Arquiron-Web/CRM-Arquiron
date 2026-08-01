@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { mapRetoPrincipalToServicio } from "@/lib/crm-utils";
 import { resolveConsultorIdByNombre } from "@/lib/consultores";
@@ -141,10 +142,14 @@ export async function crearLead(data: CrearLeadInput) {
     },
   });
 
-  // No await: el envío de correos no debe demorar ni tumbar la respuesta de
-  // creación del lead si Resend falla o tarda.
-  notificarNuevoLead(created).catch((error) =>
-    console.error("Error notificando lead nuevo:", created.id, error)
+  // after() en vez de un simple "no-await": en Vercel la función serverless
+  // puede congelarse apenas se envía la respuesta, matando cualquier promesa
+  // pendiente a medias. after() le pide al runtime mantener la función viva
+  // hasta que esto termine, sin demorar la respuesta al creador del lead.
+  after(() =>
+    notificarNuevoLead(created).catch((error) =>
+      console.error("Error notificando lead nuevo:", created.id, error)
+    )
   );
 
   return created;
