@@ -100,3 +100,37 @@ const res = await fetch(`${process.env.CRM_URL}/api/public/leads`, {
 ## 5. Correos automáticos
 
 Al crear el lead, el CRM dispara automáticamente (vía Resend, `lib/email.ts`) un correo de confirmación al contacto (si dejó `emailCorporativo`) y un aviso interno a `contacto@arquiron.com` con los datos del lead. La EME no necesita implementar nada de esto — ya queda centralizado en el CRM.
+
+## 6. Actualizar un lead existente (captura progresiva)
+
+Si su flujo captura datos del mismo usuario en varios momentos (email primero, cuestionario después, WhatsApp/empresa más tarde), **no reenvíen un POST** — eso crea un lead duplicado. Usen el `id` que devolvió el POST original para actualizar ese mismo registro:
+
+```
+PATCH https://crm.arquiron.com/api/public/leads/<id>
+```
+
+Mismos headers que el POST (`Content-Type: application/json`, `x-api-key: <EVALUACION_API_KEY>`). El body acepta los mismos campos que el POST (sección 2), **todos opcionales** — solo se actualiza lo que envíen, el resto del lead queda intacto. `scoreLead`/`clasificacion`/`accionRecomendada` se recalculan automáticamente con los datos combinados (viejos + nuevos).
+
+```bash
+curl -X PATCH https://crm.arquiron.com/api/public/leads/cms123abc456 \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: <EVALUACION_API_KEY>" \
+  -d '{
+    "whatsapp": "3011234567",
+    "nombreEmpresa": "Empresa SAS",
+    "dim1": 70, "dim2": 55, "dim3": 60, "dim4": 80, "dim5": 45,
+    "dim6": 50, "dim7": 65, "dim8": 70, "dim9": 60, "dim10": 55,
+    "indiceMadurez": 61.5
+  }'
+```
+
+**Respuestas:**
+
+| Código | Cuándo |
+|---|---|
+| `200` | Actualizado correctamente — `{ "success": true, "id": "..." }` |
+| `401` | Key inválida o faltante |
+| `403` | El `id` existe pero pertenece a otra fuente (ej. un lead del Portal Web) — por seguridad, la key de la EME solo puede actualizar leads creados por la propia EME |
+| `404` | No existe un lead con ese `id` |
+
+Nota: esta actualización **no vuelve a enviar** los correos de confirmación/aviso interno — esos solo se disparan una vez, en el POST inicial.

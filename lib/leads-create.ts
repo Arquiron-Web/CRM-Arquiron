@@ -154,3 +154,129 @@ export async function crearLead(data: CrearLeadInput) {
 
   return created;
 }
+
+export interface ActualizarLeadInput {
+  nombreContacto?: string;
+  emailCorporativo?: string;
+  whatsapp?: string;
+  retoPrincipal?: string;
+  nombreEmpresa?: string;
+  sector?: string;
+  tamano?: string;
+  pais?: string;
+  ciudad?: string;
+  cargo?: string;
+  momentoContacto?: string;
+  comoNosConocio?: string;
+  referidoPor?: string;
+  aceptaPolitica?: string | boolean;
+  madurezAutoevaluada?: string | number;
+  dim1?: string | number;
+  dim2?: string | number;
+  dim3?: string | number;
+  dim4?: string | number;
+  dim5?: string | number;
+  dim6?: string | number;
+  dim7?: string | number;
+  dim8?: string | number;
+  dim9?: string | number;
+  dim10?: string | number;
+  indiceMadurez?: string | number;
+}
+
+export type ActualizarLeadResultado =
+  | { ok: true; lead: Awaited<ReturnType<typeof prisma.lead.update>> }
+  | { ok: false; motivo: "not_found" | "forbidden" };
+
+function numOrExistente(
+  valor: string | number | undefined,
+  existente: { toNumber(): number } | null
+): number | null {
+  if (valor !== undefined) {
+    const n = Number(valor);
+    return Number.isFinite(n) ? n : null;
+  }
+  return existente ? existente.toNumber() : null;
+}
+
+/**
+ * PATCH /api/public/leads/:id — actualización progresiva del mismo lead
+ * (la Evaluación de Madurez captura el email primero y completa el
+ * cuestionario/WhatsApp en pasos posteriores de la misma sesión). Solo se
+ * tocan los campos presentes en `data`; el resto del lead queda intacto.
+ * `fuenteEsperada` restringe la actualización al mismo origen que creó el
+ * lead — la key del Portal no puede tocar un lead de la Evaluación de
+ * Madurez ni viceversa, aunque conociera el id.
+ */
+export async function actualizarLeadPublico(
+  id: string,
+  fuenteEsperada: string,
+  data: ActualizarLeadInput
+): Promise<ActualizarLeadResultado> {
+  const existente = await prisma.lead.findUnique({ where: { id } });
+  if (!existente) return { ok: false, motivo: "not_found" };
+  if (existente.fuenteFormulario !== fuenteEsperada) return { ok: false, motivo: "forbidden" };
+
+  const whatsapp = data.whatsapp ?? existente.whatsapp ?? undefined;
+  const tamano = data.tamano ?? existente.tamano ?? undefined;
+  const momentoContacto = data.momentoContacto ?? existente.momentoContacto ?? undefined;
+  const comoNosConocio = data.comoNosConocio ?? existente.comoNosConocio ?? undefined;
+  const madurezAutoevaluada = numOrExistente(data.madurezAutoevaluada, existente.madurezAutoevaluada);
+  const indiceMadurez = numOrExistente(data.indiceMadurez, existente.indiceMadurez);
+
+  const servicioSugerido = data.retoPrincipal
+    ? mapRetoPrincipalToServicio(data.retoPrincipal)
+    : existente.servicioSugeridoForja || undefined;
+
+  const notas = data.referidoPor && !(existente.notas || "").startsWith("Referido por:")
+    ? `Referido por: ${data.referidoPor}${existente.notas ? " | " + existente.notas : ""}`
+    : existente.notas || undefined;
+
+  const computado = calcularScoreLead({
+    momentoContacto,
+    comoNosConocio,
+    fuenteFormulario: existente.fuenteFormulario ?? fuenteEsperada,
+    tamano,
+    whatsapp,
+    madurezAutoevaluada,
+    indiceMadurez,
+  });
+
+  const actualizado = await prisma.lead.update({
+    where: { id },
+    data: {
+      nombreContacto: data.nombreContacto ?? undefined,
+      emailCorporativo: data.emailCorporativo ?? undefined,
+      whatsapp,
+      nombreEmpresa: data.nombreEmpresa ?? undefined,
+      sector: data.sector ?? undefined,
+      tamano,
+      pais: data.pais ?? undefined,
+      ciudad: data.ciudad ?? undefined,
+      cargo: data.cargo ?? undefined,
+      retoPrincipal: data.retoPrincipal ?? undefined,
+      momentoContacto,
+      comoNosConocio,
+      servicioSugeridoForja: servicioSugerido,
+      notas,
+      madurezAutoevaluada: toDecimal(madurezAutoevaluada ?? undefined),
+      dim1: toDecimal(numOrExistente(data.dim1, existente.dim1) ?? undefined),
+      dim2: toDecimal(numOrExistente(data.dim2, existente.dim2) ?? undefined),
+      dim3: toDecimal(numOrExistente(data.dim3, existente.dim3) ?? undefined),
+      dim4: toDecimal(numOrExistente(data.dim4, existente.dim4) ?? undefined),
+      dim5: toDecimal(numOrExistente(data.dim5, existente.dim5) ?? undefined),
+      dim6: toDecimal(numOrExistente(data.dim6, existente.dim6) ?? undefined),
+      dim7: toDecimal(numOrExistente(data.dim7, existente.dim7) ?? undefined),
+      dim8: toDecimal(numOrExistente(data.dim8, existente.dim8) ?? undefined),
+      dim9: toDecimal(numOrExistente(data.dim9, existente.dim9) ?? undefined),
+      dim10: toDecimal(numOrExistente(data.dim10, existente.dim10) ?? undefined),
+      indiceMadurez: toDecimal(indiceMadurez ?? undefined),
+      aceptaPoliticaDatos: data.aceptaPolitica !== undefined ? esSi(data.aceptaPolitica) : undefined,
+      scoreLead: toDecimal(computado.scoreLead),
+      clasificacion: clasificarScore(computado.scoreLead),
+      accionRecomendada: computado.accionRecomendada,
+    },
+  });
+
+  return { ok: true, lead: actualizado };
+}

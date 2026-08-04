@@ -58,48 +58,58 @@ export const leadManualSchema = z.object({
  * con una API key — no hay sesión de usuario, así que esta validación es
  * la única defensa real contra datos mal formados.
  */
+const leadPublicoCampos = {
+  // Opcional: el formulario de contacto completo siempre lo manda; el
+  // widget de newsletter (solo email) no pide nombre, se completa un
+  // valor por defecto del lado del servidor.
+  nombreContacto: texto(200),
+  emailCorporativo: z.string().trim().email("Email inválido").max(200).optional(),
+  whatsapp: texto(30),
+  retoPrincipal: texto(100),
+  nombreEmpresa: texto(200),
+  sector: texto(100),
+  tamano: texto(50),
+  pais: texto(50),
+  ciudad: texto(100),
+  cargo: texto(100),
+  momentoContacto: texto(50),
+  comoNosConocio: texto(50),
+  referidoPor: texto(200),
+  // "contacto" (por defecto) | "newsletter" — distingue el formulario
+  // completo del widget de suscripción, ambos bajo la misma API key.
+  origenFormulario: texto(20),
+  aceptaPolitica: z.boolean().refine((v) => v === true, {
+    message: "Debes aceptar la política de tratamiento de datos",
+  }),
+  // Campos de la Evaluación de Madurez (opcionales; el Portal Web no los envía).
+  madurezAutoevaluada: z.union([z.string(), z.number()]).optional(),
+  dim1: z.union([z.string(), z.number()]).optional(),
+  dim2: z.union([z.string(), z.number()]).optional(),
+  dim3: z.union([z.string(), z.number()]).optional(),
+  dim4: z.union([z.string(), z.number()]).optional(),
+  dim5: z.union([z.string(), z.number()]).optional(),
+  dim6: z.union([z.string(), z.number()]).optional(),
+  dim7: z.union([z.string(), z.number()]).optional(),
+  dim8: z.union([z.string(), z.number()]).optional(),
+  dim9: z.union([z.string(), z.number()]).optional(),
+  dim10: z.union([z.string(), z.number()]).optional(),
+  indiceMadurez: z.union([z.string(), z.number()]).optional(),
+};
+
 export const leadPublicoSchema = z
-  .object({
-    // Opcional: el formulario de contacto completo siempre lo manda; el
-    // widget de newsletter (solo email) no pide nombre, se completa un
-    // valor por defecto del lado del servidor.
-    nombreContacto: texto(200),
-    emailCorporativo: z.string().trim().email("Email inválido").max(200).optional(),
-    whatsapp: texto(30),
-    retoPrincipal: texto(100),
-    nombreEmpresa: texto(200),
-    sector: texto(100),
-    tamano: texto(50),
-    pais: texto(50),
-    ciudad: texto(100),
-    cargo: texto(100),
-    momentoContacto: texto(50),
-    comoNosConocio: texto(50),
-    referidoPor: texto(200),
-    // "contacto" (por defecto) | "newsletter" — distingue el formulario
-    // completo del widget de suscripción, ambos bajo la misma API key.
-    origenFormulario: texto(20),
-    aceptaPolitica: z.boolean().refine((v) => v === true, {
-      message: "Debes aceptar la política de tratamiento de datos",
-    }),
-    // Campos de la Evaluación de Madurez (opcionales; el Portal Web no los envía).
-    madurezAutoevaluada: z.union([z.string(), z.number()]).optional(),
-    dim1: z.union([z.string(), z.number()]).optional(),
-    dim2: z.union([z.string(), z.number()]).optional(),
-    dim3: z.union([z.string(), z.number()]).optional(),
-    dim4: z.union([z.string(), z.number()]).optional(),
-    dim5: z.union([z.string(), z.number()]).optional(),
-    dim6: z.union([z.string(), z.number()]).optional(),
-    dim7: z.union([z.string(), z.number()]).optional(),
-    dim8: z.union([z.string(), z.number()]).optional(),
-    dim9: z.union([z.string(), z.number()]).optional(),
-    dim10: z.union([z.string(), z.number()]).optional(),
-    indiceMadurez: z.union([z.string(), z.number()]).optional(),
-  })
+  .object(leadPublicoCampos)
   .refine((d) => !!(d.emailCorporativo || d.whatsapp), {
     message: "Debes indicar al menos un email o un WhatsApp",
     path: ["emailCorporativo"],
   });
+
+/**
+ * PATCH /api/public/leads/:id — actualización progresiva del mismo lead
+ * (ej. la Evaluación de Madurez captura el email primero y completa el
+ * cuestionario/WhatsApp después). Todos los campos opcionales: solo se
+ * actualiza lo que venga en el body, el resto del lead queda intacto.
+ */
+export const leadPublicoUpdateSchema = z.object(leadPublicoCampos).partial();
 
 export const leadUpdateIgmSchema = z.object({
   idLead: z.string().trim().min(1, "idLead requerido"),
