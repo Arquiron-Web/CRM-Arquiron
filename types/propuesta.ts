@@ -1,20 +1,52 @@
 export interface Propuesta {
   id: string;
   titulo: string;
+  subtitulo: string;
   idLead: string;
   emailCliente: string;
   empresaCliente: string;
   contacto: string;
+  cargoContacto: string;
+  sectorCliente: string;
+  ciudadPais: string;
+  nitCliente: string;
   consultor: string;
   servicioForja: string;
-  introduccion: string;
-  diagnostico: string;
-  alcance: string;
-  metodologia: string;
-  entregables: string;
-  timeline: string;
-  inversion: string;
-  terminos: string;
+
+  codigoPropuesta: string;
+  fechaValidez: string;
+
+  // Resumen ejecutivo
+  fraseClave: string;
+  retoDescripcion: string;
+  duracionMeses: string;
+
+  // Entendimiento del reto
+  contextoNegocio: string;
+  retosIdentificados: string;
+
+  // Alcance
+  exclusionesAdicionales: string;
+
+  // Hoja de ruta
+  hito1Meses: string;
+  hito2Meses: string;
+  hito3Meses: string;
+  hito4Meses: string;
+
+  // Supuestos
+  horasSemanales: string;
+
+  // Inversión (Sección 11)
+  anticipoCOP: string;
+  honorarioFase1COP: string;
+  honorarioFase2COP: string;
+  bonoPorHitoCOP: string;
+  trmValor: string;
+  trmFecha: string;
+
+  notasAdicionales: string;
+
   valorUSD: string;
   estado: string;
   version: string;

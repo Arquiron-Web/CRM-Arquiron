@@ -1,72 +1,64 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { generarHTMLPropuestaPDF } from "@/lib/pdf/propuesta-html";
+import { generarPropuestaPDF } from "@/lib/pdf/generar-pdf";
+import { enviarPropuestaCliente } from "@/lib/email";
+import { toPropuestaJSON } from "@/lib/propuestas";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+export const maxDuration = 60;
 
+/**
+ * Envía la propuesta comercial al cliente: genera el PDF fiel a la
+ * plantilla a partir del estado canónico en BD, lo adjunta a un correo
+ * con Resend (lib/email.ts) y marca la propuesta como "Enviada".
+ */
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    const accessToken = (session?.user as { accessToken?: string })?.accessToken;
-
-    if (!session || !accessToken) {
+    if (!session) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    const propuesta = await request.json();
+    const { id } = await request.json();
+    if (!id) {
+      return NextResponse.json({ error: "Falta el id de la propuesta" }, { status: 400 });
+    }
 
+    const propuesta = await prisma.propuesta.findUnique({
+      where: { id },
+      include: { consultor: true },
+    });
+    if (!propuesta) {
+      return NextResponse.json({ error: "Propuesta no encontrada" }, { status: 404 });
+    }
     if (!propuesta.emailCliente) {
-      return NextResponse.json(
-        { error: "No hay email de cliente" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "No hay email de cliente" }, { status: 400 });
     }
 
-    const endpoint = process.env.NEXT_PUBLIC_GOOGLE_SHEETS_ENDPOINT;
+    // toPropuestaJSON ya normaliza todos los campos (null → "", Decimal/Date →
+    // string): es el mismo shape que el formulario envía a /api/propuestas/pdf.
+    const html = generarHTMLPropuestaPDF(toPropuestaJSON(propuesta));
+    const pdf = await generarPropuestaPDF(html);
 
-    if (!endpoint) {
-      return NextResponse.json(
-        { error: "Endpoint no configurado" },
-        { status: 500 }
-      );
+    const resultado = await enviarPropuestaCliente(propuesta, pdf);
+    if (!resultado.success) {
+      return NextResponse.json({ error: resultado.error || "Error al enviar" }, { status: 502 });
     }
 
-    const payload = {
-      tipo: "propuesta",
-      fuenteFormulario: "CRM_Propuesta",
-      emailCorporativo: propuesta.emailCliente,
-      nombreContacto: propuesta.contacto || "",
-      nombreEmpresa: propuesta.empresaCliente || "",
-      tituloPropuesta: propuesta.titulo || "",
-      servicioForja: propuesta.servicioForja || "",
-      consultor: propuesta.consultor || "",
-      version: propuesta.version || "v1.0",
-      valorUSD: propuesta.valorUSD || "",
-      introduccion: propuesta.introduccion || "",
-      diagnostico: propuesta.diagnostico || "",
-      alcance: propuesta.alcance || "",
-      metodologia: propuesta.metodologia || "",
-      entregables: propuesta.entregables || "",
-      timeline: propuesta.timeline || "",
-      inversion: propuesta.inversion || "",
-      terminos: propuesta.terminos || "",
-    };
-
-    const response = await fetch(endpoint, {
-      method: "POST",
-      redirect: "follow",
-      headers: {
-        "Content-Type": "text/plain;charset=UTF-8",
-      },
-      body: JSON.stringify(payload),
+    const fechaEnvio = new Date();
+    await prisma.propuesta.update({
+      where: { id },
+      data: { estado: "Enviada", fechaEnvio },
     });
 
-    console.log("Apps Script response status:", response.status);
-
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, fechaEnvio: fechaEnvio.toISOString() });
   } catch (error: unknown) {
     const err = error as { message?: string };
-    console.error("Error detallado /api/propuestas/enviar:", err?.message);
+    console.error("Error POST /api/propuestas/enviar:", err?.message);
     return NextResponse.json(
       { error: "Error al enviar", detail: err?.message },
       { status: 500 }

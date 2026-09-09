@@ -37,7 +37,7 @@ function NuevaPropuestaContent() {
     const pais = searchParams.get("pais");
     const tamano = searchParams.get("tamano");
     if (!empresa && !email) return undefined;
-    const diagnostico = generarDiagnosticoDesdeParams({
+    const retoDescripcion = generarDiagnosticoDesdeParams({
       empresa: empresa ?? undefined,
       igm: igm ?? undefined,
       dimDebil: dimDebil ?? undefined,
@@ -48,7 +48,8 @@ function NuevaPropuestaContent() {
       emailCliente: email || undefined,
       contacto: contacto || undefined,
       servicioForja: servicio || undefined,
-      diagnostico: diagnostico || undefined,
+      retoDescripcion: retoDescripcion || undefined,
+      sectorCliente: sector || undefined,
       notasInternas: [sector, pais, tamano].filter(Boolean).length
         ? `Sector: ${sector || "—"}, País: ${pais || "—"}, Tamaño: ${tamano || "—"}`
         : undefined,
@@ -78,14 +79,12 @@ function NuevaPropuestaContent() {
   };
 
   const handleEnviar = async (data: Partial<Propuesta>) => {
-    const ahora = new Date().toISOString();
     const payload = {
       ...data,
       id: data.id || "PROP-" + Date.now(),
-      estado: "Enviada",
-      fechaEnvio: ahora,
+      estado: "Borrador",
       version: version,
-      timestamp: ahora,
+      timestamp: new Date().toISOString(),
     };
     const res = await fetch("/api/propuestas", {
       method: "POST",
@@ -97,7 +96,7 @@ function NuevaPropuestaContent() {
     const resEnviar = await fetch("/api/propuestas/enviar", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...payload, id: result.id || payload.id }),
+      body: JSON.stringify({ id: result.id || payload.id }),
     });
     if (!resEnviar.ok) throw new Error("Error al enviar");
     router.push("/propuestas");

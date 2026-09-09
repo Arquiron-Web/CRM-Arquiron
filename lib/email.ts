@@ -1,6 +1,7 @@
 import { Resend } from "resend";
-import type { Lead } from "@prisma/client";
+import type { Lead, Propuesta, Consultor } from "@prisma/client";
 import { getPaisLabel, getRetoLabel } from "@/lib/pipeline-utils";
+import { calcularInversion, formatCOP, formatUSD } from "@/lib/propuesta-finanzas";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
@@ -191,5 +192,95 @@ async function enviarAvisoInterno(lead: Lead, esNewsletter: boolean): Promise<vo
     });
   } catch (error) {
     console.error("Error enviando aviso interno de lead:", lead.id, error);
+  }
+}
+
+function formatFechaLarga(fecha: Date | null): string {
+  if (!fecha) return "—";
+  return fecha.toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" });
+}
+
+type PropuestaConConsultor = Propuesta & { consultor: Consultor | null };
+
+/**
+ * Envía la propuesta comercial al cliente: el PDF real adjunto (calcado a
+ * la plantilla oficial) + un resumen estructurado en el cuerpo del correo,
+ * reutilizando el mismo sistema de marca que los correos de leads.
+ * Nunca lanza — un fallo de envío se reporta al llamador para que decida
+ * (a diferencia de los correos de lead, aquí el usuario sí necesita saber
+ * si falló, por eso se devuelve el resultado en vez de tragarlo).
+ */
+export async function enviarPropuestaCliente(
+  propuesta: PropuestaConConsultor,
+  pdfBuffer: Buffer
+): Promise<{ success: boolean; error?: string }> {
+  if (!resend) {
+    return { success: false, error: "RESEND_API_KEY no configurada" };
+  }
+  if (!propuesta.emailCliente) {
+    return { success: false, error: "La propuesta no tiene email de cliente" };
+  }
+
+  const inv = calcularInversion({
+    duracionMeses: propuesta.duracionMeses,
+    anticipoCOP: propuesta.anticipoCOP?.toString(),
+    honorarioFase1COP: propuesta.honorarioFase1COP?.toString(),
+    honorarioFase2COP: propuesta.honorarioFase2COP?.toString(),
+    bonoPorHitoCOP: propuesta.bonoPorHitoCOP?.toString(),
+    trmValor: propuesta.trmValor?.toString(),
+  });
+
+  const primerNombre = (propuesta.contacto || "").split(" ")[0] || "";
+  const codigo = propuesta.codigoPropuesta || propuesta.id;
+
+  const filas = [
+    filaTabla("Código de propuesta", codigo),
+    filaTabla("Proyecto", propuesta.titulo),
+    filaTabla("Consultor responsable", propuesta.consultor?.nombre),
+    filaTabla("Duración", propuesta.duracionMeses ? `${propuesta.duracionMeses} meses` : ""),
+    filaTabla("Inversión total (COP + IVA)", formatCOP(inv.totalConIvaCOP)),
+    filaTabla("Equivalente USD (ref.)", propuesta.trmValor ? formatUSD(inv.totalUSD) : ""),
+    filaTabla("Válida hasta", formatFechaLarga(propuesta.fechaValidez)),
+  ].join("");
+
+  const contenido = `
+    ${etiqueta("Propuesta comercial")}
+    <p style="margin:0 0 14px;color:${AZUL_MARINO};font-size:22px;font-weight:800;letter-spacing:-0.3px;">
+      Propuesta para ${propuesta.empresaCliente || "su empresa"}
+    </p>
+    <p style="margin:0 0 22px;color:#4b5563;font-size:14px;line-height:1.75;">
+      Estimado/a${primerNombre ? " " + primerNombre : ""}, adjuntamos la propuesta comercial
+      completa en PDF. Aquí tiene un resumen de los puntos clave:
+    </p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8faff;border:1px solid #e6ebf7;border-radius:14px;padding:6px 18px;">
+      ${filas}
+    </table>
+    ${boton(
+      "Escríbenos para agendar una llamada",
+      `mailto:contacto@arquiron.com?subject=${encodeURIComponent("Sobre la propuesta " + codigo)}`,
+      AMBAR_QUIRON
+    )}
+    <p style="margin:18px 0 0;color:#9ca3af;font-size:12px;">
+      O responde directamente a este correo para coordinar los siguientes pasos.
+    </p>
+  `;
+
+  try {
+    await resend.emails.send({
+      from: FROM,
+      to: propuesta.emailCliente,
+      subject: `Propuesta comercial ${codigo} — ${propuesta.titulo}`,
+      html: envoltura(contenido),
+      attachments: [
+        {
+          filename: `Propuesta-${codigo}.pdf`,
+          content: pdfBuffer,
+        },
+      ],
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("Error enviando propuesta:", propuesta.id, error);
+    return { success: false, error: "Error al enviar el correo" };
   }
 }

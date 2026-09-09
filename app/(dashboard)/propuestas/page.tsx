@@ -143,27 +143,17 @@ export default function PropuestasPage() {
       const res = await fetch("/api/propuestas/enviar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(propuesta),
+        body: JSON.stringify({ id: propuesta.id }),
       });
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.detail || "Error al enviar");
+        throw new Error(err.detail || err.error || "Error al enviar");
       }
-      const ahora = new Date().toISOString();
-      await fetch("/api/propuestas", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...propuesta,
-          id: propuesta.id,
-          estado: "Enviada",
-          fechaEnvio: ahora,
-        }),
-      });
+      const { fechaEnvio } = await res.json();
       setPropuestas((prev) =>
         prev.map((p) =>
           p.id === propuesta.id
-            ? { ...p, estado: "Enviada", fechaEnvio: ahora }
+            ? { ...p, estado: "Enviada", fechaEnvio: fechaEnvio || new Date().toISOString() }
             : p
         )
       );

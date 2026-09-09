@@ -157,24 +157,52 @@ export const proyectoUpdateSchema = z.object({
 
 // ---------- Propuestas ----------
 
+const monto = () => z.union([z.string(), z.number()]).optional();
+
 const propuestaCampos = {
   id: texto(100),
   titulo: texto(300),
+  subtitulo: texto(300),
   idLead: texto(100),
   emailCliente: texto(200),
   empresaCliente: texto(200),
   contacto: texto(200),
+  cargoContacto: texto(200),
+  sectorCliente: texto(200),
+  ciudadPais: texto(200),
+  nitCliente: texto(100),
   consultor: texto(200),
   servicioForja: texto(300),
-  introduccion: texto(5000),
-  diagnostico: texto(5000),
-  alcance: texto(5000),
-  metodologia: texto(5000),
-  entregables: texto(5000),
-  timeline: texto(3000),
-  inversion: texto(3000),
-  terminos: texto(5000),
-  valorUSD: z.union([z.string(), z.number()]).optional(),
+
+  codigoPropuesta: texto(100),
+  fechaValidez: texto(50),
+
+  fraseClave: texto(500),
+  retoDescripcion: texto(3000),
+  duracionMeses: monto(),
+
+  contextoNegocio: texto(3000),
+  retosIdentificados: texto(3000),
+
+  exclusionesAdicionales: texto(3000),
+
+  hito1Meses: texto(100),
+  hito2Meses: texto(100),
+  hito3Meses: texto(100),
+  hito4Meses: texto(100),
+
+  horasSemanales: monto(),
+
+  anticipoCOP: monto(),
+  honorarioFase1COP: monto(),
+  honorarioFase2COP: monto(),
+  bonoPorHitoCOP: monto(),
+  trmValor: monto(),
+  trmFecha: texto(50),
+
+  notasAdicionales: texto(3000),
+
+  valorUSD: monto(),
   estado: texto(50),
   version: texto(20),
   plantilla: texto(100),

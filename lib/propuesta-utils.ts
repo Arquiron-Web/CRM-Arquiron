@@ -9,6 +9,7 @@ const NIVELES_IGM: Record<number, string> = {
   5: "optimizado",
 };
 
+/** Genera un párrafo de "descripción del reto" (Sección 02) a partir del IGM de un lead. */
 export function generarDiagnosticoDesdeLead(lead: Lead): string {
   const igm = parseFloat(lead.indiceMadurez || "0");
   const empresa = lead.nombreEmpresa || "la empresa";
@@ -44,6 +45,7 @@ export function generarDiagnosticoDesdeLead(lead: Lead): string {
   return `El diagnóstico de madurez empresarial de ${empresa} arroja un Índice Global de Madurez (IGM) de ${igm.toFixed(1)}/5, ubicándose en el nivel ${nivel}. Las dimensiones con mayor brecha identificadas son: ${brechas}.`;
 }
 
+/** Igual que generarDiagnosticoDesdeLead, pero a partir de query params (flujo Evaluación de Madurez → Nueva propuesta). */
 export function generarDiagnosticoDesdeParams(params: {
   empresa?: string;
   igm?: string | number;

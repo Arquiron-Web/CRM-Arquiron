@@ -6,7 +6,7 @@ import { resolveConsultorIdByNombre } from "@/lib/consultores";
 import { propuestaCreateSchema, propuestaUpdateSchema, formatZodError } from "@/lib/schemas";
 import { NextResponse } from "next/server";
 import { EstadoPropuesta } from "@prisma/client";
-import { toDecimal } from "@/lib/decimal";
+import { toDecimal, toInt } from "@/lib/decimal";
 
 function parseEnum<T extends string>(
   value: string | undefined,
@@ -68,20 +68,46 @@ export async function POST(request: Request) {
       data: {
         id: data.id || undefined,
         titulo: data.titulo || "",
+        subtitulo: data.subtitulo,
         leadId,
         emailCliente: data.emailCliente,
         empresaCliente: data.empresaCliente,
         contacto: data.contacto,
+        cargoContacto: data.cargoContacto,
+        sectorCliente: data.sectorCliente,
+        ciudadPais: data.ciudadPais,
+        nitCliente: data.nitCliente,
         consultorId,
         servicioForja: data.servicioForja,
-        introduccion: data.introduccion,
-        diagnostico: data.diagnostico,
-        alcance: data.alcance,
-        metodologia: data.metodologia,
-        entregables: data.entregables,
-        timeline: data.timeline,
-        inversion: data.inversion,
-        terminos: data.terminos,
+
+        codigoPropuesta: data.codigoPropuesta,
+        fechaValidez: data.fechaValidez ? new Date(data.fechaValidez) : undefined,
+
+        fraseClave: data.fraseClave,
+        retoDescripcion: data.retoDescripcion,
+        duracionMeses: toInt(data.duracionMeses),
+
+        contextoNegocio: data.contextoNegocio,
+        retosIdentificados: data.retosIdentificados,
+
+        exclusionesAdicionales: data.exclusionesAdicionales,
+
+        hito1Meses: data.hito1Meses,
+        hito2Meses: data.hito2Meses,
+        hito3Meses: data.hito3Meses,
+        hito4Meses: data.hito4Meses,
+
+        horasSemanales: toInt(data.horasSemanales),
+
+        anticipoCOP: toDecimal(data.anticipoCOP),
+        honorarioFase1COP: toDecimal(data.honorarioFase1COP),
+        honorarioFase2COP: toDecimal(data.honorarioFase2COP),
+        bonoPorHitoCOP: toDecimal(data.bonoPorHitoCOP),
+        trmValor: toDecimal(data.trmValor),
+        trmFecha: data.trmFecha ? new Date(data.trmFecha) : undefined,
+
+        notasAdicionales: data.notasAdicionales,
+
         valorUSD: toDecimal(data.valorUSD),
         estado: parseEnum(data.estado, EstadoPropuesta) ?? "Borrador",
         version: data.version || "v1.0",
@@ -123,20 +149,46 @@ export async function PUT(request: Request) {
       where: { id },
       data: {
         titulo: campos.titulo,
+        subtitulo: campos.subtitulo,
         leadId,
         emailCliente: campos.emailCliente,
         empresaCliente: campos.empresaCliente,
         contacto: campos.contacto,
+        cargoContacto: campos.cargoContacto,
+        sectorCliente: campos.sectorCliente,
+        ciudadPais: campos.ciudadPais,
+        nitCliente: campos.nitCliente,
         consultorId,
         servicioForja: campos.servicioForja,
-        introduccion: campos.introduccion,
-        diagnostico: campos.diagnostico,
-        alcance: campos.alcance,
-        metodologia: campos.metodologia,
-        entregables: campos.entregables,
-        timeline: campos.timeline,
-        inversion: campos.inversion,
-        terminos: campos.terminos,
+
+        codigoPropuesta: campos.codigoPropuesta,
+        fechaValidez: campos.fechaValidez ? new Date(campos.fechaValidez) : undefined,
+
+        fraseClave: campos.fraseClave,
+        retoDescripcion: campos.retoDescripcion,
+        duracionMeses: toInt(campos.duracionMeses),
+
+        contextoNegocio: campos.contextoNegocio,
+        retosIdentificados: campos.retosIdentificados,
+
+        exclusionesAdicionales: campos.exclusionesAdicionales,
+
+        hito1Meses: campos.hito1Meses,
+        hito2Meses: campos.hito2Meses,
+        hito3Meses: campos.hito3Meses,
+        hito4Meses: campos.hito4Meses,
+
+        horasSemanales: toInt(campos.horasSemanales),
+
+        anticipoCOP: toDecimal(campos.anticipoCOP),
+        honorarioFase1COP: toDecimal(campos.honorarioFase1COP),
+        honorarioFase2COP: toDecimal(campos.honorarioFase2COP),
+        bonoPorHitoCOP: toDecimal(campos.bonoPorHitoCOP),
+        trmValor: toDecimal(campos.trmValor),
+        trmFecha: campos.trmFecha ? new Date(campos.trmFecha) : undefined,
+
+        notasAdicionales: campos.notasAdicionales,
+
         valorUSD: toDecimal(campos.valorUSD),
         estado: parseEnum(campos.estado, EstadoPropuesta),
         version: campos.version,

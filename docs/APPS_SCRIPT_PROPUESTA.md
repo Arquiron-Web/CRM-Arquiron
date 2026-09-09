@@ -1,3 +1,11 @@
+> **⚠️ Obsoleto.** El envío de propuestas comerciales ya no pasa por Apps
+> Script/Google Sheets: `/api/propuestas/enviar` genera el PDF fiel a la
+> plantilla oficial (`lib/pdf/`) y lo envía directo con Resend
+> (`lib/email.ts#enviarPropuestaCliente`), igual que los correos de leads.
+> Este documento queda solo como referencia histórica; si el Apps Script
+> sigue desplegado con este bloque, puede eliminarse — el CRM ya no lo
+> invoca para propuestas.
+
 # Código para agregar al Google Apps Script
 
 Abre **Extensiones → Apps Script** en tu Google Sheet y aplica estos cambios.

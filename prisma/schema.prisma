@@ -170,7 +170,8 @@ model Lead {
 model Propuesta {
   id String @id @default(cuid())
 
-  titulo String
+  titulo    String
+  subtitulo String?
 
   leadId String?
   lead   Lead?   @relation(fields: [leadId], references: [id])
@@ -178,19 +179,49 @@ model Propuesta {
   emailCliente   String?
   empresaCliente String?
   contacto       String?
+  cargoContacto  String?
+  sectorCliente  String?
+  ciudadPais     String?
+  nitCliente     String?
 
   consultorId String?
   consultor   Consultor? @relation(fields: [consultorId], references: [id])
 
   servicioForja String?
-  introduccion  String? @db.Text
-  diagnostico   String? @db.Text
-  alcance       String? @db.Text
-  metodologia   String? @db.Text
-  entregables   String? @db.Text
-  timeline      String? @db.Text
-  inversion     String? @db.Text
-  terminos      String? @db.Text
+
+  codigoPropuesta String?
+  fechaValidez    DateTime? @db.Date
+
+  // Resumen ejecutivo
+  fraseClave      String? @db.Text
+  retoDescripcion String? @db.Text
+  duracionMeses   Int?    @default(6)
+
+  // Entendimiento del reto
+  contextoNegocio     String? @db.Text
+  retosIdentificados  String? @db.Text
+
+  // Alcance
+  exclusionesAdicionales String? @db.Text
+
+  // Hoja de ruta — etiqueta de mes(es) de cada hito FORJA
+  hito1Meses String? @default("Mes 1")
+  hito2Meses String? @default("Meses 2 y 3")
+  hito3Meses String? @default("Mes 4")
+  hito4Meses String? @default("Meses 5 y 6")
+
+  // Supuestos
+  horasSemanales Int?
+
+  // Inversión (Sección 11)
+  anticipoCOP       Decimal? @db.Decimal(14, 2)
+  honorarioFase1COP Decimal? @db.Decimal(14, 2)
+  honorarioFase2COP Decimal? @db.Decimal(14, 2)
+  bonoPorHitoCOP    Decimal? @db.Decimal(14, 2)
+  trmValor          Decimal? @db.Decimal(10, 2)
+  trmFecha          DateTime? @db.Date
+
+  notasAdicionales String? @db.Text
 
   valorUSD  Decimal?        @db.Decimal(12, 2)
   estado    EstadoPropuesta @default(Borrador)

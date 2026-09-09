@@ -66,13 +66,7 @@ export default function EditarPropuestaPage() {
 
   const handleEnviar = async (data: Partial<Propuesta>) => {
     if (!propuesta?.id) throw new Error("Sin id");
-    const ahora = new Date().toISOString();
-    const payload = {
-      ...data,
-      id: propuesta.id,
-      estado: "Enviada",
-      fechaEnvio: ahora,
-    };
+    const payload = { ...data, id: propuesta.id, estado: "Borrador" };
     const resPut = await fetch("/api/propuestas", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -82,7 +76,7 @@ export default function EditarPropuestaPage() {
     const resEnviar = await fetch("/api/propuestas/enviar", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...payload, ...data }),
+      body: JSON.stringify({ id: propuesta.id }),
     });
     if (!resEnviar.ok) throw new Error("Error al enviar");
     router.push("/propuestas");
