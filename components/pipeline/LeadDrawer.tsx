@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   MessageCircle,
   Mail,
@@ -10,7 +11,19 @@ import {
   Calendar,
   MapPin,
   Monitor,
+  Target,
+  ChevronRight,
 } from "lucide-react";
+import {
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
+  Legend,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 import {
   Dialog,
   DialogContent,
@@ -24,15 +37,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { DimensionBar } from "./DimensionBar";
 import { EstadoBadge } from "@/components/ui/EstadoBadge";
 import { EstadoSelect } from "@/components/ui/EstadoSelect";
 import { ConsultorSelect } from "@/components/ui/ConsultorSelect";
+import { getClasificacionColor, getPaisLabel } from "@/lib/pipeline-utils";
 import {
-  getClasificacionColor,
-  getPaisLabel,
-  DIMENSION_LABELS,
-} from "@/lib/pipeline-utils";
+  getNivelMadurez,
+  calcularBrechas,
+  BRECHA_A_SERVICIO,
+} from "@/lib/benchmarks-madurez";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { Lead } from "@/types/lead";
@@ -150,6 +163,7 @@ export function LeadDrawer({
   onSave,
   onCrearProyecto,
 }: LeadDrawerProps) {
+  const router = useRouter();
   const [estadoLead, setEstadoLead] = useState("");
   const [consultorAsignado, setConsultorAsignado] = useState("");
   const [fechaContacto, setFechaContacto] = useState("");
@@ -214,19 +228,39 @@ export function LeadDrawer({
   const fuenteBadge = getFuenteBadge(lead.fuenteFormulario);
   const hasIGM = lead.indiceMadurez && lead.indiceMadurez.trim() !== "";
   const igmValue = parseFloat(lead.indiceMadurez) || 0;
+  const hasAutoeval = lead.madurezAutoevaluada && lead.madurezAutoevaluada.trim() !== "";
+  const autoevalValue = parseFloat(lead.madurezAutoevaluada) || 0;
+  const brechaPercepcion = hasAutoeval ? autoevalValue - igmValue : null;
 
-  const dims = [
-    { key: "dim1", value: parseFloat(lead.dim1) || 0 },
-    { key: "dim2", value: parseFloat(lead.dim2) || 0 },
-    { key: "dim3", value: parseFloat(lead.dim3) || 0 },
-    { key: "dim4", value: parseFloat(lead.dim4) || 0 },
-    { key: "dim5", value: parseFloat(lead.dim5) || 0 },
-    { key: "dim6", value: parseFloat(lead.dim6) || 0 },
-    { key: "dim7", value: parseFloat(lead.dim7) || 0 },
-    { key: "dim8", value: parseFloat(lead.dim8) || 0 },
-    { key: "dim9", value: parseFloat(lead.dim9) || 0 },
-    { key: "dim10", value: parseFloat(lead.dim10) || 0 },
+  const dimsArray = [
+    parseFloat(lead.dim1) || 0,
+    parseFloat(lead.dim2) || 0,
+    parseFloat(lead.dim3) || 0,
+    parseFloat(lead.dim4) || 0,
+    parseFloat(lead.dim5) || 0,
+    parseFloat(lead.dim6) || 0,
+    parseFloat(lead.dim7) || 0,
+    parseFloat(lead.dim8) || 0,
+    parseFloat(lead.dim9) || 0,
+    parseFloat(lead.dim10) || 0,
   ];
+
+  // calcularBrechas ordena de la brecha más negativa (peor) a la más
+  // positiva, así el primer elemento es la dimensión más floja frente al
+  // benchmark — la señal que debería orientar qué servicio ofrecer primero.
+  const brechas = hasIGM ? calcularBrechas(dimsArray, lead.pais) : [];
+  const brechasPorDimension = [...brechas].sort((a, b) => a.indice - b.indice);
+  const peorBrecha = brechas[0];
+  const servicioRecomendado =
+    (peorBrecha && BRECHA_A_SERVICIO[peorBrecha.nombre]) || lead.servicioSugeridoForja || "";
+  const nivel = hasIGM ? getNivelMadurez(igmValue) : null;
+
+  const radarData = brechasPorDimension.map((d) => ({
+    nombre: d.nombre.length > 12 ? d.nombre.slice(0, 11) + "…" : d.nombre,
+    fullNombre: d.nombre,
+    Empresa: d.score,
+    Benchmark: d.benchmark,
+  }));
 
   const getIGMColor = () => {
     if (igmValue >= 4) return "text-arquiron-teal";
@@ -238,6 +272,22 @@ export function LeadDrawer({
   const whatsappUrl = (whatsapp: string) => {
     const num = (whatsapp || "").replace(/\D/g, "");
     return num ? `https://wa.me/${num}` : "#";
+  };
+
+  const handleCrearPropuesta = () => {
+    const params = new URLSearchParams();
+    params.set("empresa", lead.nombreEmpresa || "");
+    params.set("email", lead.emailCorporativo || "");
+    params.set("igm", String(igmValue));
+    params.set("dimDebil", peorBrecha?.nombre ?? "");
+    params.set("servicio", servicioRecomendado);
+    params.set("id", lead.id || "");
+    params.set("contacto", lead.nombreContacto || "");
+    params.set("sector", lead.sector || "");
+    params.set("pais", lead.pais || "");
+    params.set("tamano", lead.tamano || "");
+    onOpenChange(false);
+    router.push(`/propuestas/nueva?${params.toString()}`);
   };
 
   return (
@@ -325,23 +375,117 @@ export function LeadDrawer({
               </p>
             ) : (
               <>
+                {/* IGM + nivel + brecha de percepción */}
                 <div className="rounded-xl border border-gray-100 bg-gray-50/50 p-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                    Índice de Madurez Global
-                  </p>
-                  <p className={`mt-1 text-4xl font-bold ${getIGMColor()}`}>
-                    {igmValue.toFixed(1)}
-                  </p>
+                  <div className="flex flex-wrap items-end justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                        Índice de Madurez Global
+                      </p>
+                      <div className="mt-1 flex items-baseline gap-1.5">
+                        <p className={`text-4xl font-bold ${getIGMColor()}`}>
+                          {igmValue.toFixed(1)}
+                        </p>
+                        <span className="text-sm text-gray-400">/ 5.0</span>
+                      </div>
+                    </div>
+                    {nivel && (
+                      <span
+                        className="rounded-full px-3 py-1 text-sm font-semibold"
+                        style={{ backgroundColor: `${nivel.color}20`, color: nivel.color }}
+                      >
+                        {nivel.nombre}
+                      </span>
+                    )}
+                  </div>
+                  {hasAutoeval && brechaPercepcion !== null && (
+                    <p className="mt-3 text-sm text-gray-600">
+                      Autoevaluación {autoevalValue.toFixed(1)} vs IGM real {igmValue.toFixed(1)} — la
+                      empresa{" "}
+                      <strong>{brechaPercepcion >= 0 ? "subestima" : "sobreestima"}</strong> su
+                      madurez ({brechaPercepcion >= 0 ? "+" : ""}
+                      {brechaPercepcion.toFixed(1)} pts).
+                    </p>
+                  )}
                 </div>
-                <div className="space-y-4">
-                  {dims.map((d) => (
-                    <DimensionBar
-                      key={d.key}
-                      label={DIMENSION_LABELS[d.key as keyof typeof DIMENSION_LABELS] || d.key}
-                      value={d.value}
-                      max={5}
-                    />
+
+                {/* Radar vs benchmark */}
+                <div className="rounded-xl border border-gray-100 bg-white p-4">
+                  <h4 className="mb-3 font-semibold text-arquiron-navy">
+                    Perfil vs benchmark de mercado
+                  </h4>
+                  <ResponsiveContainer width="100%" height={260}>
+                    <RadarChart data={radarData}>
+                      <PolarGrid stroke="#f3f4f6" />
+                      <PolarAngleAxis dataKey="nombre" tick={{ fontSize: 10, fill: "#6b7280" }} />
+                      <PolarRadiusAxis domain={[0, 5]} tick={{ fontSize: 9 }} />
+                      <Radar
+                        name="Empresa"
+                        dataKey="Empresa"
+                        fill="#1B3A5C"
+                        fillOpacity={0.4}
+                        stroke="#1B3A5C"
+                        strokeWidth={2}
+                      />
+                      <Radar
+                        name="Benchmark"
+                        dataKey="Benchmark"
+                        fill="#D4881E"
+                        fillOpacity={0.15}
+                        stroke="#D4881E"
+                        strokeWidth={1}
+                        strokeDasharray="5 5"
+                      />
+                      <Legend wrapperStyle={{ fontSize: "10px" }} />
+                      <Tooltip />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Top brechas vs benchmark */}
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-arquiron-navy">
+                    Mayores brechas vs benchmark
+                  </h4>
+                  {brechas.slice(0, 3).map((b, i) => (
+                    <div
+                      key={b.indice}
+                      className="flex items-start gap-3 rounded-xl border border-gray-100 bg-white p-3"
+                    >
+                      <div
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
+                        style={{ backgroundColor: b.pilarColor }}
+                      >
+                        {i + 1}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-arquiron-navy">{b.nombre}</p>
+                        <p className="text-sm text-gray-500">
+                          Score {b.score.toFixed(1)} vs benchmark {b.benchmark.toFixed(1)} → brecha{" "}
+                          {b.brecha >= 0 ? "+" : ""}
+                          {b.brecha.toFixed(1)}
+                        </p>
+                        <p className="mt-1 text-xs font-medium text-arquiron-purple">
+                          {BRECHA_A_SERVICIO[b.nombre] || "—"}
+                        </p>
+                      </div>
+                    </div>
                   ))}
+                </div>
+
+                {/* Posicionamiento sugerido + CTA */}
+                <div className="rounded-xl border border-arquiron-navy/20 bg-arquiron-navy/5 p-4">
+                  <h5 className="mb-2 flex items-center gap-2 font-semibold text-arquiron-navy">
+                    <Target className="h-4 w-4" />
+                    Posicionamiento sugerido
+                  </h5>
+                  <p className="text-sm text-gray-600">
+                    {servicioRecomendado || "Sin recomendación disponible todavía."}
+                  </p>
+                  <Button size="sm" className="mt-3" onClick={handleCrearPropuesta}>
+                    Crear propuesta
+                    <ChevronRight className="ml-1 h-4 w-4" />
+                  </Button>
                 </div>
               </>
             )}

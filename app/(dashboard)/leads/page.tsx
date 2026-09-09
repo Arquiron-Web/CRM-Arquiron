@@ -45,7 +45,7 @@ import { LeadCardGrid } from "@/components/leads/LeadCardGrid";
 import { ViewToggle, type ViewMode } from "@/components/leads/ViewToggle";
 import { EstadoBadge } from "@/components/ui/EstadoBadge";
 import { EstadoSelect } from "@/components/ui/EstadoSelect";
-import { calcularTiempoRelativo } from "@/lib/utils";
+import { TiempoRelativo } from "@/components/ui/TiempoRelativo";
 import { ESTADOS_LEAD, getEstado } from "@/lib/estados";
 import { useConsultores } from "@/hooks/useConsultores";
 import { toast } from "sonner";
@@ -865,11 +865,13 @@ function LeadsPageContent() {
                     {/* Última Interacción */}
                     <div className="text-sm text-gray-400">
                       {(lead.estadoLead || "NUEVO") === "NUEVO" &&
-                      !lead.fechaContacto
-                        ? "Nunca"
-                        : calcularTiempoRelativo(
-                            lead.fechaContacto || lead.timestamp || ""
-                          )}
+                      !lead.fechaContacto ? (
+                        "Nunca"
+                      ) : (
+                        <TiempoRelativo
+                          timestamp={lead.fechaContacto || lead.timestamp || ""}
+                        />
+                      )}
                     </div>
 
                     {/* Acciones */}

@@ -31,28 +31,10 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { EstadoBadge } from "@/components/ui/EstadoBadge";
+import { TiempoRelativo } from "@/components/ui/TiempoRelativo";
 import { getRetoLabel } from "@/lib/pipeline-utils";
 import type { Lead } from "@/types/lead";
 import Link from "next/link";
-
-function calcularTiempoRelativo(timestamp: string): string {
-  if (!timestamp) return "Fecha desconocida";
-  const fecha = new Date(timestamp);
-  const ahora = new Date();
-  const diffMs = ahora.getTime() - fecha.getTime();
-  const diffMin = Math.floor(diffMs / 60000);
-  const diffHrs = Math.floor(diffMs / 3600000);
-  const diffDias = Math.floor(diffMs / 86400000);
-
-  if (diffMin < 60) return `Hace ${diffMin} minutos`;
-  if (diffHrs < 24) return `Hace ${diffHrs} horas`;
-  if (diffDias === 1) return "Ayer";
-  if (diffDias < 7) return `Hace ${diffDias} días`;
-  return fecha.toLocaleDateString("es-CO", {
-    day: "2-digit",
-    month: "short",
-  });
-}
 
 const FUENTE_LABELS: Record<string, string> = {
   Portal_Empresarial: "Portal Web",
@@ -275,14 +257,11 @@ export default function DashboardPage() {
       lead.consultorAsignado ||
       (fuente === "Portal_Empresarial" ? "Portal Web" : "Evaluación");
 
-    const tiempo = calcularTiempoRelativo(lead.timestamp);
-
     return {
       icono,
       titulo,
       descripcion,
       consultor,
-      tiempo,
       lead,
     };
   });
@@ -589,7 +568,8 @@ export default function DashboardPage() {
                           size="sm"
                         />
                         <span className="text-xs text-gray-400">
-                          {actividad.consultor} · {actividad.tiempo}
+                          {actividad.consultor} ·{" "}
+                          <TiempoRelativo timestamp={actividad.lead.timestamp} />
                         </span>
                       </div>
                     </div>

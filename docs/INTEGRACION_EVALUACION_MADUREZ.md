@@ -53,6 +53,8 @@ Mismos campos base que el formulario de contacto del Portal Web, más los campos
 
 No hace falta enviar `fuenteFormulario` — el CRM lo asigna automáticamente como `"Evaluacion_Madurez"` según la API key usada (protección anti-spoofing: no se puede sobrescribir desde el body).
 
+> ℹ️ **Nota interna (no afecta a la EME):** el CRM guarda estos campos internamente en escala 1-5 (la misma del reporte PDF), porque así los asume el resto del CRM (scoring, benchmarks, propuestas). La conversión (÷20) se hace automáticamente en `lib/leads-create.ts` al recibir el payload — la EME sigue enviando 0-100 tal como se documenta aquí, sin cambios de su lado.
+
 ## 3. Ejemplo de request
 
 ```bash

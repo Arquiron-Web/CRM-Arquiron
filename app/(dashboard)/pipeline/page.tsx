@@ -24,6 +24,7 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { LeadDrawer } from "@/components/pipeline/LeadDrawer";
+import { DiasEnEtapa } from "@/components/pipeline/DiasEnEtapa";
 import { NewDealModal } from "@/components/pipeline/NewDealModal";
 import { NewProyectoModal } from "@/components/proyectos/NewProyectoModal";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -35,7 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { calcularTiempoRelativo } from "@/lib/utils";
+import { TiempoRelativo } from "@/components/ui/TiempoRelativo";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { getEstado } from "@/lib/estados";
@@ -112,17 +113,9 @@ function getTituloDeal(lead: Lead): string {
   return lead.servicioSugeridoForja || lead.nombreEmpresa || "-";
 }
 
-function getDiasDesdeRegistro(timestamp: string): number {
-  if (!timestamp) return 0;
-  const fecha = new Date(timestamp);
-  const ahora = new Date();
-  return Math.floor((ahora.getTime() - fecha.getTime()) / (1000 * 60 * 60 * 24));
-}
-
 function KanbanCardContent({ lead }: { lead: Lead }) {
   const valor = getValorLead(lead);
   const probabilidad = lead.scoreLead || "0";
-  const dias = getDiasDesdeRegistro(lead.timestamp);
 
   return (
     <>
@@ -146,9 +139,9 @@ function KanbanCardContent({ lead }: { lead: Lead }) {
       <div className="my-3 border-t border-gray-50" />
       <div className="flex items-center gap-1 text-xs text-gray-400">
         <Clock className="h-3 w-3 shrink-0 text-gray-400" />
-        {dias}d en etapa
+        <DiasEnEtapa timestamp={lead.timestamp} />
         <span className="text-gray-300">·</span>
-        {calcularTiempoRelativo(lead.timestamp)}
+        <TiempoRelativo timestamp={lead.timestamp} />
       </div>
       <div className="mt-2 flex items-center gap-2">
         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1B3A5C] text-xs font-bold text-white">

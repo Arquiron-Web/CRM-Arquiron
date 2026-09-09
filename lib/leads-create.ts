@@ -11,6 +11,23 @@ const esSi = (v: string | boolean | undefined) => {
   return (v || "").trim().toLowerCase() === "si";
 };
 
+/**
+ * La Evaluación de Madurez (EME) envía madurezAutoevaluada/dim1-10/indiceMadurez
+ * en escala 0-100 (ver docs/INTEGRACION_EVALUACION_MADUREZ.md, sección 2-3);
+ * el resto del CRM — scoring (lib/lead-scoring.ts), el módulo Madurez
+ * (lib/benchmarks-madurez.ts) y el IGM manual de proyectos — asume escala 1-5.
+ * Se convierte una sola vez, al ingresar el dato, para que ningún otro punto
+ * del CRM tenga que saber de esta diferencia de escala.
+ */
+function escalarSiEME(
+  v: string | number | undefined,
+  fuenteFormulario: string
+): string | number | undefined {
+  if (v === undefined || fuenteFormulario !== "Evaluacion_Madurez") return v;
+  const n = Number(v);
+  return Number.isFinite(n) ? n / 20 : v;
+}
+
 export interface CrearLeadInput {
   nombreEmpresa?: string;
   sector?: string;
@@ -75,9 +92,23 @@ export async function crearLead(data: CrearLeadInput) {
         : "";
 
   const indiceMadurez =
-    data.indiceMadurez !== undefined ? Number(data.indiceMadurez) : null;
+    data.indiceMadurez !== undefined
+      ? Number(escalarSiEME(data.indiceMadurez, data.fuenteFormulario))
+      : null;
   const madurezAutoevaluada =
-    data.madurezAutoevaluada !== undefined ? Number(data.madurezAutoevaluada) : null;
+    data.madurezAutoevaluada !== undefined
+      ? Number(escalarSiEME(data.madurezAutoevaluada, data.fuenteFormulario))
+      : null;
+  const dim1 = escalarSiEME(data.dim1, data.fuenteFormulario);
+  const dim2 = escalarSiEME(data.dim2, data.fuenteFormulario);
+  const dim3 = escalarSiEME(data.dim3, data.fuenteFormulario);
+  const dim4 = escalarSiEME(data.dim4, data.fuenteFormulario);
+  const dim5 = escalarSiEME(data.dim5, data.fuenteFormulario);
+  const dim6 = escalarSiEME(data.dim6, data.fuenteFormulario);
+  const dim7 = escalarSiEME(data.dim7, data.fuenteFormulario);
+  const dim8 = escalarSiEME(data.dim8, data.fuenteFormulario);
+  const dim9 = escalarSiEME(data.dim9, data.fuenteFormulario);
+  const dim10 = escalarSiEME(data.dim10, data.fuenteFormulario);
 
   const computado = calcularScoreLead({
     momentoContacto: data.momentoContacto,
@@ -118,18 +149,18 @@ export async function crearLead(data: CrearLeadInput) {
       whatsapp: data.whatsapp,
       momentoContacto: data.momentoContacto,
       comoNosConocio: data.comoNosConocio,
-      madurezAutoevaluada: toDecimal(data.madurezAutoevaluada),
-      dim1: toDecimal(data.dim1),
-      dim2: toDecimal(data.dim2),
-      dim3: toDecimal(data.dim3),
-      dim4: toDecimal(data.dim4),
-      dim5: toDecimal(data.dim5),
-      dim6: toDecimal(data.dim6),
-      dim7: toDecimal(data.dim7),
-      dim8: toDecimal(data.dim8),
-      dim9: toDecimal(data.dim9),
-      dim10: toDecimal(data.dim10),
-      indiceMadurez: toDecimal(data.indiceMadurez),
+      madurezAutoevaluada: toDecimal(madurezAutoevaluada ?? undefined),
+      dim1: toDecimal(dim1),
+      dim2: toDecimal(dim2),
+      dim3: toDecimal(dim3),
+      dim4: toDecimal(dim4),
+      dim5: toDecimal(dim5),
+      dim6: toDecimal(dim6),
+      dim7: toDecimal(dim7),
+      dim8: toDecimal(dim8),
+      dim9: toDecimal(dim9),
+      dim10: toDecimal(dim10),
+      indiceMadurez: toDecimal(indiceMadurez ?? undefined),
       servicioSugeridoForja: servicioSugerido || undefined,
       estadoLead: "NUEVO",
       fuenteFormulario: data.fuenteFormulario,
@@ -221,8 +252,14 @@ export async function actualizarLeadPublico(
   const tamano = data.tamano ?? existente.tamano ?? undefined;
   const momentoContacto = data.momentoContacto ?? existente.momentoContacto ?? undefined;
   const comoNosConocio = data.comoNosConocio ?? existente.comoNosConocio ?? undefined;
-  const madurezAutoevaluada = numOrExistente(data.madurezAutoevaluada, existente.madurezAutoevaluada);
-  const indiceMadurez = numOrExistente(data.indiceMadurez, existente.indiceMadurez);
+  const madurezAutoevaluada = numOrExistente(
+    escalarSiEME(data.madurezAutoevaluada, fuenteEsperada),
+    existente.madurezAutoevaluada
+  );
+  const indiceMadurez = numOrExistente(
+    escalarSiEME(data.indiceMadurez, fuenteEsperada),
+    existente.indiceMadurez
+  );
 
   const servicioSugerido = data.retoPrincipal
     ? mapRetoPrincipalToServicio(data.retoPrincipal)
@@ -260,16 +297,16 @@ export async function actualizarLeadPublico(
       servicioSugeridoForja: servicioSugerido,
       notas,
       madurezAutoevaluada: toDecimal(madurezAutoevaluada ?? undefined),
-      dim1: toDecimal(numOrExistente(data.dim1, existente.dim1) ?? undefined),
-      dim2: toDecimal(numOrExistente(data.dim2, existente.dim2) ?? undefined),
-      dim3: toDecimal(numOrExistente(data.dim3, existente.dim3) ?? undefined),
-      dim4: toDecimal(numOrExistente(data.dim4, existente.dim4) ?? undefined),
-      dim5: toDecimal(numOrExistente(data.dim5, existente.dim5) ?? undefined),
-      dim6: toDecimal(numOrExistente(data.dim6, existente.dim6) ?? undefined),
-      dim7: toDecimal(numOrExistente(data.dim7, existente.dim7) ?? undefined),
-      dim8: toDecimal(numOrExistente(data.dim8, existente.dim8) ?? undefined),
-      dim9: toDecimal(numOrExistente(data.dim9, existente.dim9) ?? undefined),
-      dim10: toDecimal(numOrExistente(data.dim10, existente.dim10) ?? undefined),
+      dim1: toDecimal(numOrExistente(escalarSiEME(data.dim1, fuenteEsperada), existente.dim1) ?? undefined),
+      dim2: toDecimal(numOrExistente(escalarSiEME(data.dim2, fuenteEsperada), existente.dim2) ?? undefined),
+      dim3: toDecimal(numOrExistente(escalarSiEME(data.dim3, fuenteEsperada), existente.dim3) ?? undefined),
+      dim4: toDecimal(numOrExistente(escalarSiEME(data.dim4, fuenteEsperada), existente.dim4) ?? undefined),
+      dim5: toDecimal(numOrExistente(escalarSiEME(data.dim5, fuenteEsperada), existente.dim5) ?? undefined),
+      dim6: toDecimal(numOrExistente(escalarSiEME(data.dim6, fuenteEsperada), existente.dim6) ?? undefined),
+      dim7: toDecimal(numOrExistente(escalarSiEME(data.dim7, fuenteEsperada), existente.dim7) ?? undefined),
+      dim8: toDecimal(numOrExistente(escalarSiEME(data.dim8, fuenteEsperada), existente.dim8) ?? undefined),
+      dim9: toDecimal(numOrExistente(escalarSiEME(data.dim9, fuenteEsperada), existente.dim9) ?? undefined),
+      dim10: toDecimal(numOrExistente(escalarSiEME(data.dim10, fuenteEsperada), existente.dim10) ?? undefined),
       indiceMadurez: toDecimal(indiceMadurez ?? undefined),
       aceptaPoliticaDatos: data.aceptaPolitica !== undefined ? esSi(data.aceptaPolitica) : undefined,
       scoreLead: toDecimal(computado.scoreLead),
