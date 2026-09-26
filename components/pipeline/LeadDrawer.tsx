@@ -282,7 +282,7 @@ export function LeadDrawer({
   const nivel = hasIGM ? getNivelMadurez(igmValue) : null;
 
   const radarData = brechasPorDimension.map((d) => ({
-    nombre: d.nombre.length > 12 ? d.nombre.slice(0, 11) + "…" : d.nombre,
+    nombre: d.corto,
     fullNombre: d.nombre,
     Empresa: d.score,
     Benchmark: d.benchmark,

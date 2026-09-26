@@ -25,20 +25,6 @@ const AMBAR = "#D4881E";
 
 const LOGO_URL = process.env.EMAIL_LOGO_URL || "";
 
-/** Orden de DIMENSIONES (dim1…dim10). */
-const NOMBRES_CORTOS = [
-  "Estrategia",
-  "Gobierno",
-  "Sostenib.",
-  "Finanzas",
-  "Talento",
-  "Operac.",
-  "Innovación",
-  "Tecnol.",
-  "Datos",
-  "CX",
-];
-
 export interface EvaluacionPDFData {
   empresa: string;
   contacto?: string;
@@ -93,7 +79,7 @@ function marca(): string {
 
 // ── Radar (SVG inline) ──────────────────────────────────────────────
 
-function radarSVG(scores: number[], bench: number[]): string {
+function radarSVG(scores: number[], bench: number[], etiquetas: string[]): string {
   const size = 440;
   const c = size / 2;
   const R = 140;
@@ -114,11 +100,11 @@ function radarSVG(scores: number[], bench: number[]): string {
       return `<line x1="${c}" y1="${c}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#e5e7eb" stroke-width="1" />`;
     })
     .join("");
-  const etiquetas = scores
+  const etiquetasSVG = scores
     .map((_, i) => {
       const [x, y] = punto(i, 5, 20);
       const anchor = x < c - 8 ? "end" : x > c + 8 ? "start" : "middle";
-      return `<text x="${x.toFixed(1)}" y="${(y + 4).toFixed(1)}" font-size="11" fill="#4b5563" text-anchor="${anchor}">${esc(NOMBRES_CORTOS[i])}</text>`;
+      return `<text x="${x.toFixed(1)}" y="${(y + 4).toFixed(1)}" font-size="11" fill="#4b5563" text-anchor="${anchor}">${esc(etiquetas[i])}</text>`;
     })
     .join("");
   const escala = [1, 2, 3, 4, 5]
@@ -130,7 +116,7 @@ function radarSVG(scores: number[], bench: number[]): string {
     ${anillos}${ejes}${escala}
     <polygon points="${poligono(bench)}" fill="${AMBAR}" fill-opacity="0.08" stroke="${AMBAR}" stroke-width="1.5" stroke-dasharray="5 4" />
     <polygon points="${poligono(scores)}" fill="${AZUL_MARINO}" fill-opacity="0.28" stroke="${AZUL_MARINO}" stroke-width="2.5" />
-    ${etiquetas}
+    ${etiquetasSVG}
   </svg>`;
 }
 
@@ -142,7 +128,7 @@ export function generarHTMLEvaluacionPDF(d: EvaluacionPDFData): string {
   const dims = DIMENSIONES.map((dim, i) => {
     const score = d.dims[i] || 0;
     const benchmark = bench[i] ?? 2.6;
-    return { ...dim, corto: NOMBRES_CORTOS[i], score, benchmark, brecha: parseFloat((score - benchmark).toFixed(2)) };
+    return { ...dim, score, benchmark, brecha: parseFloat((score - benchmark).toFixed(2)) };
   });
 
   const nivel = getNivelMadurez(d.igm);
@@ -210,7 +196,7 @@ export function generarHTMLEvaluacionPDF(d: EvaluacionPDFData): string {
 
     <div class="radar-caja">
       <h3>Perfil por dimensión vs. benchmark ${esc(getPaisLabel(paisKey))}</h3>
-      <div class="radar">${radarSVG(dims.map((x) => x.score), dims.map((x) => x.benchmark))}</div>
+      <div class="radar">${radarSVG(dims.map((x) => x.score), dims.map((x) => x.benchmark), dims.map((x) => x.corto))}</div>
       <p class="leyenda"><span class="sw" style="background:${AZUL_MARINO};"></span> Empresa
         <span class="sw sw-b" style="border-color:${AMBAR};"></span> Benchmark de mercado · escala 1-5</p>
     </div>

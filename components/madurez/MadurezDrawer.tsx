@@ -74,7 +74,7 @@ export function MadurezDrawer({
   if (!empresa) return null;
 
   const radarData = empresa.dimensiones.map((d, i) => ({
-    nombre: d.nombre.length > 12 ? d.nombre.slice(0, 11) + "…" : d.nombre,
+    nombre: DIMENSIONES.find((x) => x.indice === d.indice)?.corto ?? d.nombre,
     fullNombre: d.nombre,
     Empresa: d.score,
     Benchmark: empresa.dimensiones[i]?.benchmark ?? 2.6,

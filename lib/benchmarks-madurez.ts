@@ -16,17 +16,18 @@ export const IGM_POR_PAIS: Record<string, number> = {
   latam: 2.64,
 };
 
+/** `corto` es único por dimensión: los radares lo usan como etiqueta del eje (recharts colapsa categorías repetidas). */
 export const DIMENSIONES = [
-  { indice: 1, nombre: "Estrategia y Dirección", pilar: "ADN Estratégico", pilarColor: "#1B3A5C" },
-  { indice: 2, nombre: "Gobierno Empresarial", pilar: "ADN Estratégico", pilarColor: "#1B3A5C" },
-  { indice: 3, nombre: "Sostenibilidad", pilar: "ADN Estratégico", pilarColor: "#1B3A5C" },
-  { indice: 4, nombre: "Finanzas y Rentabilidad", pilar: "Motor Operativo", pilarColor: "#33487A" },
-  { indice: 5, nombre: "Talento y Cultura", pilar: "Motor Operativo", pilarColor: "#33487A" },
-  { indice: 6, nombre: "Operaciones", pilar: "Motor Operativo", pilarColor: "#33487A" },
-  { indice: 7, nombre: "Innovación y Agilidad", pilar: "Inteligencia Digital", pilarColor: "#8560C0" },
-  { indice: 8, nombre: "Estrategia Tecnológica", pilar: "Inteligencia Digital", pilarColor: "#8560C0" },
-  { indice: 9, nombre: "Inteligencia de Datos", pilar: "Inteligencia Digital", pilarColor: "#8560C0" },
-  { indice: 10, nombre: "Experiencia del Cliente", pilar: "Enfoque al Cliente", pilarColor: "#D4881E" },
+  { indice: 1, nombre: "Estrategia y Dirección", corto: "Estrategia", pilar: "ADN Estratégico", pilarColor: "#1B3A5C" },
+  { indice: 2, nombre: "Gobierno Empresarial", corto: "Gobierno", pilar: "ADN Estratégico", pilarColor: "#1B3A5C" },
+  { indice: 3, nombre: "Sostenibilidad", corto: "Sostenib.", pilar: "ADN Estratégico", pilarColor: "#1B3A5C" },
+  { indice: 4, nombre: "Finanzas y Rentabilidad", corto: "Finanzas", pilar: "Motor Operativo", pilarColor: "#33487A" },
+  { indice: 5, nombre: "Talento y Cultura", corto: "Talento", pilar: "Motor Operativo", pilarColor: "#33487A" },
+  { indice: 6, nombre: "Operaciones", corto: "Operac.", pilar: "Motor Operativo", pilarColor: "#33487A" },
+  { indice: 7, nombre: "Innovación y Agilidad", corto: "Innovación", pilar: "Inteligencia Digital", pilarColor: "#8560C0" },
+  { indice: 8, nombre: "Estrategia Tecnológica", corto: "Tecnol.", pilar: "Inteligencia Digital", pilarColor: "#8560C0" },
+  { indice: 9, nombre: "Inteligencia de Datos", corto: "Datos", pilar: "Inteligencia Digital", pilarColor: "#8560C0" },
+  { indice: 10, nombre: "Experiencia del Cliente", corto: "CX", pilar: "Enfoque al Cliente", pilarColor: "#D4881E" },
 ];
 
 export const NIVELES_MADUREZ = [
@@ -78,6 +79,7 @@ export function calcularBrechas(
 ): Array<{
   indice: number;
   nombre: string;
+  corto: string;
   pilar: string;
   pilarColor: string;
   score: number;
