@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { SaludoFecha } from "@/components/ui/SaludoFecha";
 import { NotificationBell } from "@/components/layout/NotificationBell";
 import { UserMenu } from "@/components/layout/UserMenu";
 import { GlobalSearch } from "@/components/layout/GlobalSearch";
@@ -55,13 +56,6 @@ const configItem = {
   label: "Configuración",
   activo: true,
 };
-
-function getSaludo() {
-  const hour = new Date().getHours();
-  if (hour >= 5 && hour < 12) return "Buenos días";
-  if (hour >= 12 && hour < 18) return "Buenas tardes";
-  return "Buenas noches";
-}
 
 export default function DashboardLayout({
   children,
@@ -302,17 +296,7 @@ export default function DashboardLayout({
               <Menu className="h-5 w-5" />
             </Button>
             <div className="hidden lg:block">
-              <p className="text-base font-bold text-[#1B3A5C]">
-                {getSaludo()}, {firstName}
-              </p>
-              <p className="text-xs text-gray-400">
-                {new Date().toLocaleDateString("es-CO", {
-                  weekday: "long",
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                })}
-              </p>
+              <SaludoFecha nombre={firstName} />
             </div>
           </div>
           <GlobalSearch />

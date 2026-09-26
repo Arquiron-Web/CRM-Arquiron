@@ -14,8 +14,11 @@ import type { Browser } from "puppeteer-core";
  * actualiza el paquete, hay que actualizar también `CHROMIUM_PACK_URL`.
  */
 
-const CHROMIUM_PACK_URL =
-  "https://github.com/Sparticuz/chromium/releases/download/v149.0.0/chromium-v149.0.0-pack.tar";
+// Desde la v143 los packs se publican por arquitectura (pack.x64.tar /
+// pack.arm64.tar); sin el sufijo la URL devuelve 404 y el PDF falla con 500.
+const CHROMIUM_PACK_URL = `https://github.com/Sparticuz/chromium/releases/download/v149.0.0/chromium-v149.0.0-pack.${
+  process.arch === "arm64" ? "arm64" : "x64"
+}.tar`;
 
 const esProduccion = process.env.NODE_ENV === "production" || !!process.env.VERCEL;
 
