@@ -627,9 +627,9 @@ export default function MadurezPage() {
                 </h4>
                 <p className="mt-1 text-sm text-gray-600">
                   {stats && stats.brechaPercepcionPromedio > 0
-                    ? "En promedio, las empresas subestiman su madurez. Usa el IGM como argumento para demostrar el valor de la evaluación."
+                    ? "En promedio, las empresas sobreestiman su madurez. El IGM ayuda a alinear expectativas."
                     : stats && stats.brechaPercepcionPromedio < 0
-                      ? "En promedio, las empresas sobreestiman su madurez. El IGM ayuda a alinear expectativas."
+                      ? "En promedio, las empresas subestiman su madurez. Usa el IGM como argumento para demostrar el valor de la evaluación."
                       : "La autoevaluación se alinea con el IGM. Revisa empresas individuales para oportunidades."}
                 </p>
               </div>

@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { generarHTMLPropuestaPDF } from "@/lib/pdf/propuesta-html";
-import { generarPropuestaPDF } from "@/lib/pdf/generar-pdf";
+import { generarPDF } from "@/lib/pdf/generar-pdf";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
 
     const propuesta = await request.json();
     const html = generarHTMLPropuestaPDF(propuesta);
-    const pdf = await generarPropuestaPDF(html);
+    const pdf = await generarPDF(html);
 
     return new NextResponse(new Uint8Array(pdf), {
       status: 200,

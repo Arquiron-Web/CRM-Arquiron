@@ -1,7 +1,7 @@
 import type { Browser } from "puppeteer-core";
 
 /**
- * Convierte HTML a PDF con Chromium headless.
+ * Convierte HTML a PDF con Chromium headless (propuestas e informes de evaluación).
  *
  * En producción (Vercel) usa `puppeteer-core` + `@sparticuz/chromium-min`
  * (el binario se descarga una vez por instancia fría desde el pack remoto
@@ -46,7 +46,7 @@ const HEADER_TEMPLATE = `
     ARQUIRON
   </div>`;
 
-export async function generarPropuestaPDF(html: string): Promise<Buffer> {
+export async function generarPDF(html: string): Promise<Buffer> {
   const browser = await lanzarNavegador();
   try {
     const page = await browser.newPage();

@@ -3,7 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { generarHTMLPropuestaPDF } from "@/lib/pdf/propuesta-html";
-import { generarPropuestaPDF } from "@/lib/pdf/generar-pdf";
+import { generarPDF } from "@/lib/pdf/generar-pdf";
 import { enviarPropuestaCliente } from "@/lib/email";
 import { toPropuestaJSON } from "@/lib/propuestas";
 
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     // toPropuestaJSON ya normaliza todos los campos (null → "", Decimal/Date →
     // string): es el mismo shape que el formulario envía a /api/propuestas/pdf.
     const html = generarHTMLPropuestaPDF(toPropuestaJSON(propuesta));
-    const pdf = await generarPropuestaPDF(html);
+    const pdf = await generarPDF(html);
 
     const resultado = await enviarPropuestaCliente(propuesta, pdf);
     if (!resultado.success) {

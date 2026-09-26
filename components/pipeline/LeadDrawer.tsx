@@ -13,6 +13,8 @@ import {
   Monitor,
   Target,
   ChevronRight,
+  Download,
+  Loader2,
 } from "lucide-react";
 import {
   RadarChart,
@@ -173,6 +175,7 @@ export function LeadDrawer({
   const [showInteraccionModal, setShowInteraccionModal] = useState(false);
   const [showEventoModal, setShowEventoModal] = useState(false);
   const [showTareaModal, setShowTareaModal] = useState(false);
+  const [descargandoPDF, setDescargandoPDF] = useState(false);
 
   useEffect(() => {
     if (lead && open) {
@@ -203,6 +206,29 @@ export function LeadDrawer({
 
   const handleOpenChange = (next: boolean) => {
     onOpenChange(next);
+  };
+
+  const handleDescargarPDF = async () => {
+    if (!lead) return;
+    setDescargandoPDF(true);
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/evaluacion-pdf`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "No se pudo generar el PDF");
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Evaluacion-Madurez-${(lead.nombreEmpresa || "lead").replace(/[^\w\-]+/g, "_")}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "No se pudo generar el PDF");
+    } finally {
+      setDescargandoPDF(false);
+    }
   };
 
   const handleSave = async () => {
@@ -402,11 +428,25 @@ export function LeadDrawer({
                     <p className="mt-3 text-sm text-gray-600">
                       Autoevaluación {autoevalValue.toFixed(1)} vs IGM real {igmValue.toFixed(1)} — la
                       empresa{" "}
-                      <strong>{brechaPercepcion >= 0 ? "subestima" : "sobreestima"}</strong> su
+                      <strong>{brechaPercepcion >= 0 ? "sobreestima" : "subestima"}</strong> su
                       madurez ({brechaPercepcion >= 0 ? "+" : ""}
                       {brechaPercepcion.toFixed(1)} pts).
                     </p>
                   )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-3"
+                    onClick={handleDescargarPDF}
+                    disabled={descargandoPDF}
+                  >
+                    {descargandoPDF ? (
+                      <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="mr-1.5 h-4 w-4" />
+                    )}
+                    {descargandoPDF ? "Generando PDF..." : "Descargar informe PDF"}
+                  </Button>
                 </div>
 
                 {/* Radar vs benchmark */}

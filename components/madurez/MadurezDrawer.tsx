@@ -96,7 +96,7 @@ export function MadurezDrawer({
     );
   };
 
-  const metaLine = empresa.brechaPercepcion >= 0 ? "Subestima" : "Sobreestima";
+  const metaLine = empresa.brechaPercepcion >= 0 ? "Sobreestima" : "Subestima";
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>

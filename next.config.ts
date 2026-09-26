@@ -15,6 +15,7 @@ const nextConfig: NextConfig = {
   outputFileTracingExcludes: {
     "/api/propuestas/pdf": ["node_modules/puppeteer/**"],
     "/api/propuestas/enviar": ["node_modules/puppeteer/**"],
+    "/api/leads/[id]/evaluacion-pdf": ["node_modules/puppeteer/**"],
   },
 };
 
